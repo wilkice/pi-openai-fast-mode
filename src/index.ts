@@ -116,7 +116,7 @@ export function createPiFastModeExtension(
           refreshCurrentModel(ctx);
           config.enabled = parseFastCommand(args, config.enabled);
           await saveCurrent(ctx);
-          updateFastStatus(ctx, config, currentModel);
+          updateFastStatus(ctx, config, currentModel, () => pi.getThinkingLevel());
         } catch (error) {
           notifyError(ctx, error);
         }
@@ -133,7 +133,7 @@ export function createPiFastModeExtension(
           await saveCurrent(ctx);
         }
 
-        updateFastStatus(ctx, config, currentModel);
+        updateFastStatus(ctx, config, currentModel, () => pi.getThinkingLevel());
       } catch (error) {
         notifyError(ctx, error);
       }
@@ -141,7 +141,11 @@ export function createPiFastModeExtension(
 
     pi.on("model_select", async (event, ctx) => {
       currentModel = toModelRef(event.model) ?? toModelRef(ctx.model);
-      updateFastStatus(ctx, config, currentModel);
+      updateFastStatus(ctx, config, currentModel, () => pi.getThinkingLevel());
+    });
+
+    pi.on("thinking_level_select", async (_event, ctx) => {
+      updateFastStatus(ctx, config, currentModel, () => pi.getThinkingLevel());
     });
 
     pi.on("before_provider_request", (event, ctx) => {

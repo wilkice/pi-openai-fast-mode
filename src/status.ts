@@ -1,35 +1,23 @@
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { STATUS_KEY, type FastModeConfig, type ModelRef } from "./types";
 import { findMatchingTarget } from "./payload";
+import { createFastFooterFactory } from "./footer";
 
 export type StatusText = "fast" | undefined;
 
-export type FastIndicatorComponent = {
-  render(width: number): string[];
-  invalidate(): void;
-};
-
-export type FastIndicatorFactory = (
-  ...args: unknown[]
-) => FastIndicatorComponent;
-
-export type StatusContext = {
-  hasUI?: boolean;
+export type StatusContext = Partial<
+  Pick<
+    ExtensionContext,
+    | "cwd"
+    | "getContextUsage"
+    | "hasUI"
+    | "model"
+    | "modelRegistry"
+    | "sessionManager"
+  >
+> & {
   mode?: string;
-  ui?: {
-    setStatus?: (key: string, text: string | undefined) => void;
-    setWidget?: {
-      (
-        key: string,
-        content: string[] | undefined,
-        options?: { placement?: "aboveEditor" | "belowEditor" },
-      ): void;
-      (
-        key: string,
-        content: FastIndicatorFactory | undefined,
-        options?: { placement?: "aboveEditor" | "belowEditor" },
-      ): void;
-    };
-  };
+  ui?: Partial<ExtensionContext["ui"]>;
 };
 
 export function getStatusText(
@@ -41,42 +29,41 @@ export function getStatusText(
     : undefined;
 }
 
-export function getRightAlignedStatusLine(text: string, width: number): string {
-  const safeWidth = Math.max(0, Math.floor(width));
-  if (safeWidth === 0) return "";
-  if (text.length >= safeWidth) return text.slice(0, safeWidth);
-  return `${" ".repeat(safeWidth - text.length)}${text}`;
-}
-
-export function createFastIndicatorFactory(text: string): FastIndicatorFactory {
-  return () => ({
-    render(width: number): string[] {
-      return [getRightAlignedStatusLine(text, width)];
-    },
-    invalidate(): void {},
-  });
-}
-
 export function canSetTuiStatus(ctx: StatusContext): boolean {
   if (!ctx.hasUI) return false;
   if (ctx.mode !== undefined && ctx.mode !== "tui") return false;
   return (
-    typeof ctx.ui?.setWidget === "function" ||
+    typeof ctx.ui?.setFooter === "function" ||
     typeof ctx.ui?.setStatus === "function"
   );
 }
 
-function setFastIndicator(ctx: StatusContext, text: StatusText): void {
-  if (typeof ctx.ui?.setWidget === "function") {
-    ctx.ui.setStatus?.(STATUS_KEY, undefined);
-    ctx.ui.setWidget(
-      STATUS_KEY,
-      text === undefined ? undefined : createFastIndicatorFactory(text),
-      { placement: "belowEditor" },
+function hasFooterContext(ctx: StatusContext): ctx is ExtensionContext {
+  return (
+    typeof ctx.ui?.setFooter === "function" &&
+    typeof ctx.getContextUsage === "function" &&
+    ctx.modelRegistry !== undefined &&
+    ctx.sessionManager !== undefined
+  );
+}
+
+function setFastIndicator(
+  ctx: StatusContext,
+  text: StatusText,
+  getThinkingLevel: () => string,
+): void {
+  if (hasFooterContext(ctx)) {
+    // Clear the legacy status first so upgrades do not leave a third footer line.
+    ctx.ui.setStatus(STATUS_KEY, undefined);
+    ctx.ui.setFooter(
+      text === undefined
+        ? undefined
+        : createFastFooterFactory(ctx, getThinkingLevel),
     );
     return;
   }
 
+  // Compatibility fallback for Pi versions without custom footer support.
   ctx.ui?.setStatus?.(STATUS_KEY, text);
 }
 
@@ -84,12 +71,13 @@ export function updateFastStatus(
   ctx: StatusContext,
   config: FastModeConfig,
   model: ModelRef | undefined,
+  getThinkingLevel: () => string = () => "off",
 ): void {
   if (!canSetTuiStatus(ctx)) return;
-  setFastIndicator(ctx, getStatusText(config, model));
+  setFastIndicator(ctx, getStatusText(config, model), getThinkingLevel);
 }
 
 export function clearFastStatus(ctx: StatusContext): void {
   if (!canSetTuiStatus(ctx)) return;
-  setFastIndicator(ctx, undefined);
+  setFastIndicator(ctx, undefined, () => "off");
 }

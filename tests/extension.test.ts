@@ -83,23 +83,11 @@ function makeCtx(
 type TestContext = ReturnType<typeof makeCtx>;
 
 function expectFastIndicatorShown(ctx: TestContext): void {
-  expect(ctx.ui.setStatus).toHaveBeenLastCalledWith(STATUS_KEY, undefined);
-  expect(ctx.ui.setWidget).toHaveBeenLastCalledWith(
-    STATUS_KEY,
-    expect.any(Function),
-    { placement: "belowEditor" },
-  );
-
-  const factory = ctx.ui.setWidget.mock.calls.at(-1)?.[1];
-  expect(factory).toBeTypeOf("function");
-  expect((factory as Function)().render(8)).toEqual(["    fast"]);
+  expect(ctx.ui.setStatus).toHaveBeenLastCalledWith(STATUS_KEY, "fast");
 }
 
 function expectFastIndicatorHidden(ctx: TestContext): void {
   expect(ctx.ui.setStatus).toHaveBeenLastCalledWith(STATUS_KEY, undefined);
-  expect(ctx.ui.setWidget).toHaveBeenLastCalledWith(STATUS_KEY, undefined, {
-    placement: "belowEditor",
-  });
 }
 
 async function runHandler(
@@ -137,6 +125,7 @@ describe("piFastModeExtension registration", () => {
       "model_select",
       "session_shutdown",
       "session_start",
+      "thinking_level_select",
     ]);
   });
 });
@@ -647,11 +636,7 @@ describe("piFastModeExtension runtime behavior", () => {
       { ...ctx, model: { provider: "openai", id: "gpt-4" } },
     );
 
-    expect(ctx.ui.setWidget).toHaveBeenCalledWith(
-      STATUS_KEY,
-      expect.any(Function),
-      { placement: "belowEditor" },
-    );
+    expect(ctx.ui.setStatus).toHaveBeenCalledWith(STATUS_KEY, "fast");
     expectFastIndicatorHidden(ctx);
   });
 });

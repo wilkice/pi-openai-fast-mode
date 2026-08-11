@@ -9,8 +9,6 @@ import {
 import {
   canSetTuiStatus,
   clearFastStatus,
-  createFastIndicatorFactory,
-  getRightAlignedStatusLine,
   getStatusText,
   updateFastStatus,
 } from "../src/status";
@@ -168,40 +166,66 @@ describe("status behavior", () => {
     ).toBeUndefined();
   });
 
-  it("right-aligns the widget line to the render width", () => {
-    expect(getRightAlignedStatusLine("fast", 10)).toBe("      fast");
-    expect(getRightAlignedStatusLine("fast", 4)).toBe("fast");
-    expect(getRightAlignedStatusLine("fast", 2)).toBe("fa");
-    expect(getRightAlignedStatusLine("fast", 0)).toBe("");
-
-    const component = createFastIndicatorFactory("fast")();
-    expect(component.render(8)).toEqual(["    fast"]);
-  });
-
-  it("uses a right-aligned below-editor widget when available", () => {
+  it("places a dim fast indicator after the reasoning level", () => {
     const setStatus = vi.fn();
-    const setWidget = vi.fn();
-    const ctx = { hasUI: true, mode: "tui", ui: { setStatus, setWidget } };
+    const setFooter = vi.fn();
+    const ctx = {
+      cwd: "/repo",
+      hasUI: true,
+      mode: "tui",
+      model: {
+        provider: "openai",
+        id: "gpt-5.4",
+        reasoning: true,
+        contextWindow: 100_000,
+      },
+      modelRegistry: { isUsingOAuth: () => false },
+      sessionManager: {
+        getEntries: () => [],
+        getCwd: () => "/repo",
+        getSessionName: () => undefined,
+      },
+      getContextUsage: () => ({
+        tokens: 0,
+        contextWindow: 100_000,
+        percent: 0,
+      }),
+      ui: { setStatus, setFooter },
+    } as any;
 
-    updateFastStatus(ctx, config, { provider: "openai", id: "gpt-5.4" });
-    clearFastStatus(ctx);
-
-    expect(setStatus).toHaveBeenNthCalledWith(1, STATUS_KEY, undefined);
-    expect(setWidget).toHaveBeenNthCalledWith(
-      1,
-      STATUS_KEY,
-      expect.any(Function),
-      { placement: "belowEditor" },
+    updateFastStatus(
+      ctx,
+      config,
+      { provider: "openai", id: "gpt-5.4" },
+      () => "medium",
     );
-    const factory = setWidget.mock.calls[0]?.[1];
-    expect((factory as Function)().render(10)).toEqual(["      fast"]);
-    expect(setStatus).toHaveBeenNthCalledWith(2, STATUS_KEY, undefined);
-    expect(setWidget).toHaveBeenNthCalledWith(2, STATUS_KEY, undefined, {
-      placement: "belowEditor",
-    });
+
+    expect(setStatus).toHaveBeenCalledWith(STATUS_KEY, undefined);
+    expect(setFooter).toHaveBeenCalledWith(expect.any(Function));
+
+    const factory = setFooter.mock.calls[0]?.[0];
+    const component = factory(
+      { requestRender: vi.fn() },
+      { fg: (color: string, text: string) => `<${color}>${text}</${color}>` },
+      {
+        onBranchChange: () => vi.fn(),
+        getGitBranch: () => null,
+        getAvailableProviderCount: () => 2,
+        getExtensionStatuses: () => new Map(),
+      },
+    );
+    const lines = component.render(80);
+
+    expect(lines).toHaveLength(2);
+    expect(lines[1]).toContain(
+      "(openai) gpt-5.4 • medium • fast</dim>",
+    );
+
+    clearFastStatus(ctx);
+    expect(setFooter).toHaveBeenLastCalledWith(undefined);
   });
 
-  it("falls back to the TUI footer status when widgets are unavailable", () => {
+  it("falls back to the status API when custom footers are unavailable", () => {
     const setStatus = vi.fn();
     const ctx = { hasUI: true, mode: "tui", ui: { setStatus } };
 
