@@ -91,6 +91,21 @@ Fast Mode starts disabled and only applies to exact configured provider/model pa
 }
 ```
 
+### Upgrade policy
+
+Targets are user-owned once they differ from a package default. On startup, the
+extension preserves custom provider/model pairs, per-target `serviceTier`
+values, removals, ordering, and an empty `targets` array. An empty array
+intentionally disables Fast Mode targeting even when `enabled` is `true`.
+
+When a release adds default targets, it migrates a persisted target list only
+if that list exactly matches a known historical package default (including
+order and service tiers). It then replaces that untouched historical list with
+the new default list while preserving `enabled`. Every other list is treated as
+explicit configuration and is not merged with or replaced by package defaults.
+Custom providers are retained in configuration, although payload targeting is
+currently limited to OpenAI and OpenAI-Codex providers.
+
 User-scoped state is stored under `~/.pi/agent/extensions/pi-openai-fast-mode/config.json`.
 Project-scoped state is stored under `./.pi/pi-openai-fast-mode/config.json`.
 Globally installed extensions only use project-scoped state when Pi reports the

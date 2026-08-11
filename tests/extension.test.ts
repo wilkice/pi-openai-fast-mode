@@ -142,7 +142,7 @@ describe("piFastModeExtension registration", () => {
 });
 
 describe("piFastModeExtension runtime behavior", () => {
-  it("refreshes persisted targets on startup without changing enabled", async () => {
+  it("preserves persisted custom targets and service tiers on startup", async () => {
     const root = await makeTempDir();
     const cwd = join(root, "project");
     const agentDir = join(root, "agent");
@@ -156,7 +156,8 @@ describe("piFastModeExtension runtime behavior", () => {
       JSON.stringify({
         enabled: true,
         targets: [
-          { provider: "openai", model: "old-model", serviceTier: "flex" },
+          { provider: "custom-openai", model: "local-model", serviceTier: "flex" },
+          { provider: "openai", model: "gpt-5.4", serviceTier: "standard" },
         ],
       }),
       "utf8",
@@ -178,8 +179,54 @@ describe("piFastModeExtension runtime behavior", () => {
 
     expect(JSON.parse(await readFile(configPath, "utf8"))).toEqual({
       enabled: true,
-      targets: DEFAULT_CONFIG.targets,
+      targets: [
+        { provider: "custom-openai", model: "local-model", serviceTier: "flex" },
+        { provider: "openai", model: "gpt-5.4", serviceTier: "standard" },
+      ],
     });
+  });
+
+  it("preserves an explicit empty target list and disables targeting", async () => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    const agentDir = join(root, "agent");
+    const configPath = getUserConfigPath(agentDir);
+    await mkdir(join(agentDir, "extensions", "pi-openai-fast-mode"), {
+      recursive: true,
+    });
+    await mkdir(cwd, { recursive: true });
+    await writeFile(
+      configPath,
+      JSON.stringify({ enabled: true, targets: [] }),
+      "utf8",
+    );
+
+    const { pi, handlers } = createFakePi(false);
+    createPiFastModeExtension({
+      extensionDir: join(root, "global", "pi-openai-fast-mode", "src"),
+      agentDir,
+    })(pi as any);
+
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" });
+    await runHandler(
+      handlers,
+      "session_start",
+      { type: "session_start", reason: "startup" },
+      ctx,
+    );
+
+    expect(JSON.parse(await readFile(configPath, "utf8"))).toEqual({
+      enabled: true,
+      targets: [],
+    });
+    expect(
+      await runHandler(
+        handlers,
+        "before_provider_request",
+        { type: "before_provider_request", payload: { model: "gpt-5.4" } },
+        ctx,
+      ),
+    ).toBeUndefined();
   });
 
   it("a trusted project config enables Fast Mode for a global extension", async () => {

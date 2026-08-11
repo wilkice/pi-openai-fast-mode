@@ -9,12 +9,12 @@ import {
   getUserConfigPath,
   isProjectLocalExtension,
   loadConfigFromPath,
+  migrateDefaultTargets,
   normalizeConfig,
   normalizeTargets,
   parseConfigJson,
   saveConfigToPath,
   selectConfigPath,
-  syncSupportedTargets,
 } from "../src/config";
 
 const tempDirs: string[] = [];
@@ -74,13 +74,43 @@ describe("DEFAULT_CONFIG", () => {
   });
 });
 
-describe("syncSupportedTargets", () => {
-  it("uses the current package targets while preserving enabled", () => {
+describe("migrateDefaultTargets", () => {
+  it("preserves explicit targets and target-specific service tiers", () => {
+    const config = {
+      enabled: true,
+      targets: [
+        { provider: "custom-openai", model: "local-model", serviceTier: "flex" },
+        { provider: "openai", model: "gpt-5.4", serviceTier: "standard" },
+      ],
+    };
+
+    expect(migrateDefaultTargets(config)).toEqual(config);
+  });
+
+  it("preserves an intentional empty target list", () => {
+    expect(migrateDefaultTargets({ enabled: true, targets: [] })).toEqual({
+      enabled: true,
+      targets: [],
+    });
+  });
+
+  it("upgrades an exact historical package default to the current defaults", () => {
     expect(
-      syncSupportedTargets({
+      migrateDefaultTargets({
         enabled: true,
         targets: [
-          { provider: "openai", model: "old-model", serviceTier: "flex" },
+          { provider: "openai", model: "gpt-5.4", serviceTier: "priority" },
+          { provider: "openai", model: "gpt-5.5", serviceTier: "priority" },
+          {
+            provider: "openai-codex",
+            model: "gpt-5.4",
+            serviceTier: "priority",
+          },
+          {
+            provider: "openai-codex",
+            model: "gpt-5.5",
+            serviceTier: "priority",
+          },
         ],
       }),
     ).toEqual({ enabled: true, targets: DEFAULT_CONFIG.targets });
@@ -88,7 +118,7 @@ describe("syncSupportedTargets", () => {
 });
 
 describe("normalizeTargets", () => {
-  it("ignores invalid targets, unsupported providers, and duplicate provider/model pairs", () => {
+  it("ignores invalid targets and duplicate provider/model pairs while preserving custom providers", () => {
     expect(
       normalizeTargets([
         { provider: "openai", model: "gpt-5.4" },
@@ -106,6 +136,7 @@ describe("normalizeTargets", () => {
     ).toEqual([
       { provider: "openai", model: "gpt-5.4", serviceTier: "priority" },
       { provider: "openai-codex", model: "gpt-5.5", serviceTier: "priority" },
+      { provider: "anthropic", model: "claude", serviceTier: "priority" },
     ]);
   });
 
@@ -173,7 +204,7 @@ describe("config JSON IO", () => {
     expect(await loadConfigFromPath(configPath)).toEqual(DEFAULT_CONFIG);
   });
 
-  it("saveConfigToPath writes normalized config", async () => {
+  it("saveConfigToPath writes normalized config without dropping custom providers", async () => {
     const dir = await makeTempDir();
     const configPath = join(dir, "nested", "config.json");
 
@@ -189,6 +220,7 @@ describe("config JSON IO", () => {
       enabled: true,
       targets: [
         { provider: "openai", model: "gpt-5.4", serviceTier: "priority" },
+        { provider: "unsupported", model: "x", serviceTier: "priority" },
       ],
     });
   });

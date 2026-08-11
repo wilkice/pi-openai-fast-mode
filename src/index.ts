@@ -10,8 +10,8 @@ import { getFastCommandCompletions, parseFastCommand } from "./commands";
 import {
   cloneConfig,
   loadConfigForScope,
+  migrateDefaultTargets,
   saveConfigToPath,
-  syncSupportedTargets,
 } from "./config";
 import { getFastModePayload, toModelRef } from "./payload";
 import { clearFastStatus, updateFastStatus } from "./status";
@@ -57,12 +57,12 @@ export function createPiFastModeExtension(
         projectTrusted: ctx.isProjectTrusted(),
       });
 
-      config = syncSupportedTargets(loaded.config);
+      config = migrateDefaultTargets(loaded.config);
       configPath = loaded.path;
       loadedCwd = ctx.cwd;
 
-      // Persist the package's current target list on every load so upgrades
-      // automatically update existing config files without changing enabled.
+      // Persist normalization and recognized default-list migrations. Explicit
+      // target choices are left unchanged by migrateDefaultTargets.
       await saveConfigToPath(configPath, config);
     }
 

@@ -4,7 +4,6 @@ import { dirname, join, resolve, sep } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import {
   DEFAULT_SERVICE_TIER,
-  SUPPORTED_PROVIDERS,
   type FastModeConfig,
   type FastTarget,
   type ResolvedConfigPath,
@@ -64,7 +63,24 @@ export const DEFAULT_CONFIG: FastModeConfig = {
   ],
 };
 
-const SUPPORTED_PROVIDER_SET = new Set<string>(SUPPORTED_PROVIDERS);
+// Add the outgoing target list here whenever DEFAULT_CONFIG.targets changes.
+// Only exact matches are migrated, so any user customization remains untouched.
+const HISTORICAL_DEFAULT_TARGETS: readonly (readonly FastTarget[])[] = [
+  [
+    { provider: "openai", model: "gpt-5.4", serviceTier: DEFAULT_SERVICE_TIER },
+    { provider: "openai", model: "gpt-5.5", serviceTier: DEFAULT_SERVICE_TIER },
+    {
+      provider: "openai-codex",
+      model: "gpt-5.4",
+      serviceTier: DEFAULT_SERVICE_TIER,
+    },
+    {
+      provider: "openai-codex",
+      model: "gpt-5.5",
+      serviceTier: DEFAULT_SERVICE_TIER,
+    },
+  ],
+];
 
 type RecordLike = Record<string, unknown>;
 
@@ -89,11 +105,40 @@ export function cloneConfig(
   };
 }
 
-/** Keep the persisted toggle while replacing targets with this package's current list. */
-export function syncSupportedTargets(config: FastModeConfig): FastModeConfig {
+function targetsEqual(
+  left: readonly FastTarget[],
+  right: readonly FastTarget[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every((target, index) => {
+      const other = right[index];
+      return (
+        other !== undefined &&
+        target.provider === other.provider &&
+        target.model === other.model &&
+        (target.serviceTier ?? DEFAULT_SERVICE_TIER) ===
+          (other.serviceTier ?? DEFAULT_SERVICE_TIER)
+      );
+    })
+  );
+}
+
+/**
+ * Upgrade untouched historical package defaults while preserving every
+ * explicit target configuration, including an empty list.
+ */
+export function migrateDefaultTargets(config: FastModeConfig): FastModeConfig {
+  const usesHistoricalDefaults = HISTORICAL_DEFAULT_TARGETS.some((targets) =>
+    targetsEqual(config.targets, targets),
+  );
+
   return {
     enabled: config.enabled,
-    targets: DEFAULT_CONFIG.targets.map(cloneTarget),
+    targets: (usesHistoricalDefaults
+      ? DEFAULT_CONFIG.targets
+      : config.targets
+    ).map(cloneTarget),
   };
 }
 
@@ -110,9 +155,7 @@ function normalizeTarget(rawTarget: unknown): FastTarget | undefined {
   const provider = rawProvider.trim().toLowerCase();
   const model = rawModel.trim();
 
-  if (!provider || !model || !SUPPORTED_PROVIDER_SET.has(provider)) {
-    return undefined;
-  }
+  if (!provider || !model) return undefined;
 
   const rawServiceTier = rawTarget.serviceTier;
   const serviceTier =
