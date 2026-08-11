@@ -113,6 +113,15 @@ project as trusted; otherwise they continue using user-scoped state. Project-loc
 package installs use project-scoped state (and Pi only loads them after trust is
 resolved).
 
+### Configuration recovery
+
+If the selected `config.json` does not exist, the extension creates it with the
+current defaults and starts normally. An existing file that cannot be read or
+contains malformed JSON is handled differently: Fast Mode stays disabled, the
+extension reports the file path and problem in Pi's UI, and it does not rewrite
+the file during startup or shutdown. Fix the JSON or permissions, or remove the
+file to regenerate defaults, then restart Pi.
+
 ## Development
 
 Development requires Node.js 22.19.0 or newer and npm 10 or newer. Install the

@@ -50,6 +50,12 @@ export function createPiFastModeExtension(
     async function loadForContext(
       ctx: Pick<ExtensionContext, "cwd" | "isProjectTrusted">,
     ): Promise<void> {
+      // Fail closed while loading a new scope. If loading fails, no stale
+      // configuration remains active and shutdown has no path to overwrite.
+      config = cloneConfig();
+      configPath = undefined;
+      loadedCwd = ctx.cwd;
+
       const loaded = await loadConfigForScope({
         cwd: ctx.cwd,
         extensionDir,

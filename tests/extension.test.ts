@@ -142,6 +142,106 @@ describe("piFastModeExtension registration", () => {
 });
 
 describe("piFastModeExtension runtime behavior", () => {
+  it("initializes a missing config with defaults without reporting an error", async () => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    const agentDir = join(root, "agent");
+    const configPath = getUserConfigPath(agentDir);
+    await mkdir(cwd, { recursive: true });
+
+    const { pi, handlers } = createFakePi(false);
+    createPiFastModeExtension({
+      extensionDir: join(root, "global", "pi-openai-fast-mode", "src"),
+      agentDir,
+    })(pi as any);
+
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" });
+    await runHandler(
+      handlers,
+      "session_start",
+      { type: "session_start", reason: "startup" },
+      ctx,
+    );
+
+    expect(ctx.ui.notify).not.toHaveBeenCalled();
+    expect(JSON.parse(await readFile(configPath, "utf8"))).toEqual(
+      DEFAULT_CONFIG,
+    );
+  });
+
+  it("reports malformed config without overwriting it during startup or shutdown", async () => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    const agentDir = join(root, "agent");
+    const configPath = getUserConfigPath(agentDir);
+    const malformedConfig = '{ "enabled": true, broken';
+    await mkdir(join(agentDir, "extensions", "pi-openai-fast-mode"), {
+      recursive: true,
+    });
+    await mkdir(cwd, { recursive: true });
+    await writeFile(configPath, malformedConfig, "utf8");
+
+    const { pi, handlers } = createFakePi(false);
+    createPiFastModeExtension({
+      extensionDir: join(root, "global", "pi-openai-fast-mode", "src"),
+      agentDir,
+    })(pi as any);
+
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" });
+    await runHandler(
+      handlers,
+      "session_start",
+      { type: "session_start", reason: "startup" },
+      ctx,
+    );
+    await runHandler(
+      handlers,
+      "session_shutdown",
+      { type: "session_shutdown" },
+      ctx,
+    );
+
+    expect(ctx.ui.notify).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `Fast Mode config at ${configPath} contains malformed JSON`,
+      ),
+      "error",
+    );
+    expect(await readFile(configPath, "utf8")).toBe(malformedConfig);
+  });
+
+  it("reports unreadable config distinctly from malformed JSON", async () => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    const agentDir = join(root, "agent");
+    const configPath = getUserConfigPath(agentDir);
+    await mkdir(configPath, { recursive: true });
+    await mkdir(cwd, { recursive: true });
+
+    const { pi, handlers } = createFakePi(false);
+    createPiFastModeExtension({
+      extensionDir: join(root, "global", "pi-openai-fast-mode", "src"),
+      agentDir,
+    })(pi as any);
+
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" });
+    await runHandler(
+      handlers,
+      "session_start",
+      { type: "session_start", reason: "startup" },
+      ctx,
+    );
+
+    expect(ctx.ui.notify).toHaveBeenCalledWith(
+      expect.stringContaining(`Could not read Fast Mode config at ${configPath}`),
+      "error",
+    );
+    expect(ctx.ui.notify).not.toHaveBeenCalledWith(
+      expect.stringContaining("malformed JSON"),
+      expect.anything(),
+    );
+  });
+
   it("preserves persisted custom targets and service tiers on startup", async () => {
     const root = await makeTempDir();
     const cwd = join(root, "project");

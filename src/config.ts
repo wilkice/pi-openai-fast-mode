@@ -214,11 +214,7 @@ export function parseConfigJson(
   json: string,
   fallback: FastModeConfig = DEFAULT_CONFIG,
 ): FastModeConfig {
-  try {
-    return normalizeConfig(JSON.parse(json), fallback);
-  } catch {
-    return cloneConfig(fallback);
-  }
+  return normalizeConfig(JSON.parse(json), fallback);
 }
 
 export function getUserConfigPath(agentDir: string = getAgentDir()): string {
@@ -281,15 +277,66 @@ export type LoadedConfig = ResolvedConfigPath & {
   config: FastModeConfig;
 };
 
+export type ConfigLoadErrorKind = "malformed" | "unreadable";
+
+export class ConfigLoadError extends Error {
+  readonly kind: ConfigLoadErrorKind;
+  readonly configPath: string;
+
+  constructor(
+    kind: ConfigLoadErrorKind,
+    configPath: string,
+    message: string,
+    cause: unknown,
+  ) {
+    super(message, { cause });
+    this.name = "ConfigLoadError";
+    this.kind = kind;
+    this.configPath = configPath;
+  }
+}
+
+function isMissingFileError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "ENOENT"
+  );
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export async function loadConfigFromPath(
   configPath: string,
   fallback: FastModeConfig = DEFAULT_CONFIG,
 ): Promise<FastModeConfig> {
+  let json: string;
+
   try {
-    const json = await fs.readFile(configPath, "utf8");
+    json = await fs.readFile(configPath, "utf8");
+  } catch (error) {
+    if (isMissingFileError(error)) return cloneConfig(fallback);
+
+    throw new ConfigLoadError(
+      "unreadable",
+      configPath,
+      `Could not read Fast Mode config at ${configPath}: ${errorMessage(error)}. Fix permissions or remove the file and restart Pi.`,
+      error,
+    );
+  }
+
+  try {
     return parseConfigJson(json, fallback);
-  } catch {
-    return cloneConfig(fallback);
+  } catch (error) {
+    throw new ConfigLoadError(
+      "malformed",
+      configPath,
+      `Fast Mode config at ${configPath} contains malformed JSON: ${errorMessage(error)}. Fix or remove the file and restart Pi.`,
+      error,
+    );
   }
 }
 

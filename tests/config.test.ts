@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  ConfigLoadError,
   DEFAULT_CONFIG,
   cloneConfig,
   getProjectConfigPath,
@@ -190,18 +191,42 @@ describe("normalizeConfig", () => {
 });
 
 describe("config JSON IO", () => {
-  it("does not throw on invalid JSON and falls back to defaults", () => {
-    expect(parseConfigJson("not-json")).toEqual(DEFAULT_CONFIG);
+  it("parseConfigJson rejects malformed JSON", () => {
+    expect(() => parseConfigJson("not-json")).toThrow(SyntaxError);
   });
 
-  it("loadConfigFromPath falls back when a file is missing or invalid", async () => {
+  it("loadConfigFromPath initializes defaults only when the file is missing", async () => {
     const dir = await makeTempDir();
     const configPath = join(dir, "config.json");
 
     expect(await loadConfigFromPath(configPath)).toEqual(DEFAULT_CONFIG);
+  });
 
+  it("reports malformed JSON with the config path", async () => {
+    const dir = await makeTempDir();
+    const configPath = join(dir, "config.json");
     await writeFile(configPath, "{", "utf8");
-    expect(await loadConfigFromPath(configPath)).toEqual(DEFAULT_CONFIG);
+
+    await expect(loadConfigFromPath(configPath)).rejects.toMatchObject({
+      name: "ConfigLoadError",
+      kind: "malformed",
+      configPath,
+    });
+    await expect(loadConfigFromPath(configPath)).rejects.toThrow(
+      `Fast Mode config at ${configPath} contains malformed JSON`,
+    );
+  });
+
+  it("distinguishes read failures from missing files", async () => {
+    const dir = await makeTempDir();
+
+    await expect(loadConfigFromPath(dir)).rejects.toEqual(
+      expect.objectContaining<Partial<ConfigLoadError>>({
+        name: "ConfigLoadError",
+        kind: "unreadable",
+        configPath: dir,
+      }),
+    );
   });
 
   it("saveConfigToPath writes normalized config without dropping custom providers", async () => {
