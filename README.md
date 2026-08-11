@@ -115,7 +115,14 @@ resolved).
 
 ## Development
 
+Development requires Node.js 22.19.0 or newer and npm 10 or newer. Install the
+exact dependency versions from the committed lockfile, then run the complete
+verification suite:
+
 ```bash
-npm install
+npm ci
 npm run check
 ```
+
+Use `npm install` only when intentionally updating dependencies and commit the
+resulting `package-lock.json` changes.

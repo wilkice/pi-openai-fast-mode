@@ -4,6 +4,10 @@
   "description": "Pi extension package for toggling OpenAI Fast Mode priority inference",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=22.19.0",
+    "npm": ">=10.0.0"
+  },
   "keywords": [
     "pi-package",
     "pi-extension",
