@@ -48,12 +48,13 @@ export function createPiFastModeExtension(
     let currentModel: ModelRef | undefined;
 
     async function loadForContext(
-      ctx: Pick<ExtensionContext, "cwd">,
+      ctx: Pick<ExtensionContext, "cwd" | "isProjectTrusted">,
     ): Promise<void> {
       const loaded = await loadConfigForScope({
         cwd: ctx.cwd,
         extensionDir,
         agentDir,
+        projectTrusted: ctx.isProjectTrusted(),
       });
 
       config = syncSupportedTargets(loaded.config);
@@ -66,7 +67,7 @@ export function createPiFastModeExtension(
     }
 
     async function ensureLoaded(
-      ctx: Pick<ExtensionContext, "cwd">,
+      ctx: Pick<ExtensionContext, "cwd" | "isProjectTrusted">,
     ): Promise<void> {
       if (!configPath || loadedCwd !== ctx.cwd) {
         await loadForContext(ctx);
@@ -74,7 +75,7 @@ export function createPiFastModeExtension(
     }
 
     async function saveCurrent(
-      ctx: Pick<ExtensionContext, "cwd">,
+      ctx: Pick<ExtensionContext, "cwd" | "isProjectTrusted">,
     ): Promise<void> {
       if (!configPath || loadedCwd !== ctx.cwd) {
         await loadForContext(ctx);

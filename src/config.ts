@@ -207,6 +207,7 @@ export type SelectConfigPathOptions = {
   cwd: string;
   extensionDir?: string;
   agentDir?: string;
+  projectTrusted?: boolean;
   exists?: (path: string) => boolean;
 };
 
@@ -214,14 +215,15 @@ export function selectConfigPath({
   cwd,
   extensionDir,
   agentDir,
+  projectTrusted = false,
   exists = existsSync,
 }: SelectConfigPathOptions): ResolvedConfigPath {
   const projectPath = getProjectConfigPath(cwd);
-  if (exists(projectPath)) {
+  if (isProjectLocalExtension(extensionDir, cwd)) {
     return { scope: "project", path: projectPath };
   }
 
-  if (isProjectLocalExtension(extensionDir, cwd)) {
+  if (projectTrusted && exists(projectPath)) {
     return { scope: "project", path: projectPath };
   }
 

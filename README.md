@@ -93,6 +93,10 @@ Fast Mode starts disabled and only applies to exact configured provider/model pa
 
 User-scoped state is stored under `~/.pi/agent/extensions/pi-openai-fast-mode/config.json`.
 Project-scoped state is stored under `./.pi/pi-openai-fast-mode/config.json`.
+Globally installed extensions only use project-scoped state when Pi reports the
+project as trusted; otherwise they continue using user-scoped state. Project-local
+package installs use project-scoped state (and Pi only loads them after trust is
+resolved).
 
 ## Development
 

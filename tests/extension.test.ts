@@ -64,10 +64,12 @@ function createFakePi(fastFlag = false): {
 function makeCtx(
   cwd: string,
   model: { provider: string; id: string } | undefined = undefined,
+  projectTrusted = true,
 ) {
   return {
     cwd,
     model,
+    isProjectTrusted: () => projectTrusted,
     hasUI: true,
     mode: "tui",
     ui: {
@@ -177,6 +179,100 @@ describe("piFastModeExtension runtime behavior", () => {
     expect(JSON.parse(await readFile(configPath, "utf8"))).toEqual({
       enabled: true,
       targets: DEFAULT_CONFIG.targets,
+    });
+  });
+
+  it("a trusted project config enables Fast Mode for a global extension", async () => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    const agentDir = join(root, "agent");
+    const projectConfigPath = getProjectConfigPath(cwd);
+    await mkdir(join(cwd, ".pi", "pi-openai-fast-mode"), {
+      recursive: true,
+    });
+    await writeFile(
+      projectConfigPath,
+      JSON.stringify({ enabled: true, targets: DEFAULT_CONFIG.targets }),
+      "utf8",
+    );
+
+    const { pi, handlers } = createFakePi(false);
+    createPiFastModeExtension({
+      extensionDir: join(root, "global", "pi-openai-fast-mode", "src"),
+      agentDir,
+    })(pi as any);
+
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" }, true);
+    await runHandler(
+      handlers,
+      "session_start",
+      { type: "session_start", reason: "startup" },
+      ctx,
+    );
+
+    expect(
+      await runHandler(
+        handlers,
+        "before_provider_request",
+        { type: "before_provider_request", payload: { model: "gpt-5.4" } },
+        ctx,
+      ),
+    ).toEqual({ model: "gpt-5.4", service_tier: "priority" });
+    await expect(
+      readFile(getUserConfigPath(agentDir), "utf8"),
+    ).rejects.toThrow();
+  });
+
+  it("an untrusted project config cannot enable Fast Mode for a global extension", async () => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    const agentDir = join(root, "agent");
+    const projectConfigPath = getProjectConfigPath(cwd);
+    const userConfigPath = getUserConfigPath(agentDir);
+    await mkdir(join(cwd, ".pi", "pi-openai-fast-mode"), {
+      recursive: true,
+    });
+    await mkdir(join(agentDir, "extensions", "pi-openai-fast-mode"), {
+      recursive: true,
+    });
+    await writeFile(
+      projectConfigPath,
+      JSON.stringify({ enabled: true, targets: DEFAULT_CONFIG.targets }),
+      "utf8",
+    );
+    await writeFile(
+      userConfigPath,
+      JSON.stringify({ enabled: false, targets: DEFAULT_CONFIG.targets }),
+      "utf8",
+    );
+
+    const { pi, handlers } = createFakePi(false);
+    createPiFastModeExtension({
+      extensionDir: join(root, "global", "pi-openai-fast-mode", "src"),
+      agentDir,
+    })(pi as any);
+
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" }, false);
+    await runHandler(
+      handlers,
+      "session_start",
+      { type: "session_start", reason: "startup" },
+      ctx,
+    );
+
+    expect(
+      await runHandler(
+        handlers,
+        "before_provider_request",
+        { type: "before_provider_request", payload: { model: "gpt-5.4" } },
+        ctx,
+      ),
+    ).toBeUndefined();
+    expect(JSON.parse(await readFile(projectConfigPath, "utf8"))).toMatchObject({
+      enabled: true,
+    });
+    expect(JSON.parse(await readFile(userConfigPath, "utf8"))).toMatchObject({
+      enabled: false,
     });
   });
 
@@ -336,33 +432,46 @@ describe("piFastModeExtension runtime behavior", () => {
     expectFastIndicatorHidden(ctx);
   });
 
-  it("project-local package installs persist to project state instead of user state", async () => {
-    const root = await makeTempDir();
-    const cwd = join(root, "project");
-    const agentDir = join(root, "agent");
-    const extensionDir = join(cwd, ".pi", "npm", "pi-openai-fast-mode", "src");
-    await mkdir(extensionDir, { recursive: true });
+  it.each([true, false])(
+    "project-local package installs retain project state when projectTrusted=%s",
+    async (projectTrusted) => {
+      const root = await makeTempDir();
+      const cwd = join(root, "project");
+      const agentDir = join(root, "agent");
+      const extensionDir = join(
+        cwd,
+        ".pi",
+        "npm",
+        "pi-openai-fast-mode",
+        "src",
+      );
+      await mkdir(extensionDir, { recursive: true });
 
-    const { pi, handlers } = createFakePi(true);
-    createPiFastModeExtension({ extensionDir, agentDir })(pi as any);
+      const { pi, handlers } = createFakePi(true);
+      createPiFastModeExtension({ extensionDir, agentDir })(pi as any);
 
-    const ctx = makeCtx(cwd, { provider: "openai-codex", id: "gpt-5.5" });
-    await runHandler(
-      handlers,
-      "session_start",
-      { type: "session_start", reason: "startup" },
-      ctx,
-    );
+      const ctx = makeCtx(
+        cwd,
+        { provider: "openai-codex", id: "gpt-5.5" },
+        projectTrusted,
+      );
+      await runHandler(
+        handlers,
+        "session_start",
+        { type: "session_start", reason: "startup" },
+        ctx,
+      );
 
-    expect(
-      JSON.parse(await readFile(getProjectConfigPath(cwd), "utf8")),
-    ).toMatchObject({
-      enabled: true,
-    });
-    await expect(
-      readFile(getUserConfigPath(agentDir), "utf8"),
-    ).rejects.toThrow();
-  });
+      expect(
+        JSON.parse(await readFile(getProjectConfigPath(cwd), "utf8")),
+      ).toMatchObject({
+        enabled: true,
+      });
+      await expect(
+        readFile(getUserConfigPath(agentDir), "utf8"),
+      ).rejects.toThrow();
+    },
+  );
 
   it("model_select updates whether the status is visible", async () => {
     const root = await makeTempDir();

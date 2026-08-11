@@ -209,7 +209,23 @@ describe("persistence scope selection", () => {
     ).toEqual({ scope: "user", path: getUserConfigPath(agentDir) });
   });
 
-  it("uses an existing project config even for a global extension", () => {
+  it("ignores an untrusted project config for a global extension", () => {
+    const cwd = "/repo";
+    const agentDir = "/home/user/.pi/agent";
+    const projectPath = getProjectConfigPath(cwd);
+
+    expect(
+      selectConfigPath({
+        cwd,
+        agentDir,
+        extensionDir: "/home/user/.pi/agent/npm/pi-openai-fast-mode/src",
+        projectTrusted: false,
+        exists: (path) => path === projectPath,
+      }),
+    ).toEqual({ scope: "user", path: getUserConfigPath(agentDir) });
+  });
+
+  it("uses an existing trusted project config for a global extension", () => {
     const cwd = "/repo";
     const projectPath = getProjectConfigPath(cwd);
 
@@ -218,6 +234,7 @@ describe("persistence scope selection", () => {
         cwd,
         agentDir: "/home/user/.pi/agent",
         extensionDir: "/home/user/.pi/agent/npm/pi-openai-fast-mode/src",
+        projectTrusted: true,
         exists: (path) => path === projectPath,
       }),
     ).toEqual({ scope: "project", path: projectPath });
