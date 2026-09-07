@@ -33,7 +33,7 @@ afterEach(async () => {
 });
 
 describe("DEFAULT_CONFIG", () => {
-  it("starts disabled with exact OpenAI and OpenAI-Codex GPT-5.4/GPT-5.5/GPT-5.6 targets", () => {
+  it("starts disabled with exact OpenAI and OpenAI-Codex GPT-5.4/GPT-5.5/GPT-5.6/GPT-6-Astra targets", () => {
     expect(DEFAULT_CONFIG).toEqual({
       enabled: false,
       targets: [
@@ -43,6 +43,7 @@ describe("DEFAULT_CONFIG", () => {
         { provider: "openai", model: "gpt-5.6-sol", serviceTier: "priority" },
         { provider: "openai", model: "gpt-5.6-terra", serviceTier: "priority" },
         { provider: "openai", model: "gpt-5.6-luna", serviceTier: "priority" },
+        { provider: "openai", model: "gpt-6-astra", serviceTier: "priority" },
         { provider: "openai-codex", model: "gpt-5.4", serviceTier: "priority" },
         { provider: "openai-codex", model: "gpt-5.5", serviceTier: "priority" },
         { provider: "openai-codex", model: "gpt-5.6", serviceTier: "priority" },
@@ -61,6 +62,7 @@ describe("DEFAULT_CONFIG", () => {
           model: "gpt-5.6-luna",
           serviceTier: "priority",
         },
+        { provider: "openai-codex", model: "gpt-6-astra", serviceTier: "priority" },
       ],
     });
   });
@@ -76,6 +78,30 @@ describe("DEFAULT_CONFIG", () => {
 });
 
 describe("migrateDefaultTargets", () => {
+  const previousTargets = ["openai", "openai-codex"].flatMap((provider) =>
+    ["gpt-5.4", "gpt-5.5", "gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"].map(
+      (model) => ({ provider, model, serviceTier: "priority" }),
+    ),
+  );
+
+  it.each([true, false])("upgrades pre-Astra defaults while preserving enabled=%s", (enabled) => {
+    expect(migrateDefaultTargets({ enabled, targets: previousTargets })).toEqual({
+      enabled,
+      targets: DEFAULT_CONFIG.targets,
+    });
+  });
+
+  it.each([
+    previousTargets.slice(1),
+    [...previousTargets].reverse(),
+    previousTargets.map((target, index) =>
+      index === 0 ? { ...target, serviceTier: "flex" } : target,
+    ),
+  ].map((targets) => ({ targets })))("preserves customized pre-Astra defaults", ({ targets }) => {
+    const config = { enabled: true, targets };
+    expect(migrateDefaultTargets(config)).toEqual(config);
+  });
+
   it("preserves explicit targets and target-specific service tiers", () => {
     const config = {
       enabled: true,

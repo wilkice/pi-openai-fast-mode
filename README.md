@@ -1,6 +1,6 @@
 # pi-openai-fast-mode
 
-Pi package that adds a Fast Mode toggle for GPT-5.6, GPT-5.5, and GPT-5.4.
+Pi package that adds a Fast Mode toggle for GPT-6-Astra, GPT-5.6, GPT-5.5, and GPT-5.4.
 
 <img style="width: 100%; height: auto;" alt="fast mode" src="https://raw.githubusercontent.com/johncmunson/pi-openai-fast-mode/refs/heads/main/preview-img.png" />
 
@@ -57,6 +57,7 @@ Fast Mode starts disabled and only applies to exact configured provider/model pa
     { "provider": "openai", "model": "gpt-5.6-sol", "serviceTier": "priority" },
     { "provider": "openai", "model": "gpt-5.6-terra", "serviceTier": "priority" },
     { "provider": "openai", "model": "gpt-5.6-luna", "serviceTier": "priority" },
+    { "provider": "openai", "model": "gpt-6-astra", "serviceTier": "priority" },
     {
       "provider": "openai-codex",
       "model": "gpt-5.4",
@@ -85,6 +86,11 @@ Fast Mode starts disabled and only applies to exact configured provider/model pa
     {
       "provider": "openai-codex",
       "model": "gpt-5.6-luna",
+      "serviceTier": "priority"
+    },
+    {
+      "provider": "openai-codex",
+      "model": "gpt-6-astra",
       "serviceTier": "priority"
     }
   ]
