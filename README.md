@@ -128,6 +128,14 @@ extension reports the file path and problem in Pi's UI, and it does not rewrite
 the file during startup or shutdown. Fix the JSON or permissions, or remove the
 file to regenerate defaults, then restart Pi.
 
+## Response service tier
+
+**For ChatGPT-authenticated Codex, a returned `service_tier: "default"` can be
+expected and does not mean Fast Mode was ignored.** As a
+[Codex contributor confirmed](https://github.com/openai/codex/issues/14204#issuecomment-4033184620),
+Fast is handled by server-side Codex routing, so `service_tier` is not a reliable
+end-to-end verification field in this mode—even in the final response payload.
+
 ## Development
 
 Development requires Node.js 22.19.0 or newer and npm 10 or newer. Install the
