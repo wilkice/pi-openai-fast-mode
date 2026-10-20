@@ -338,7 +338,7 @@ describe("piFastModeExtension runtime behavior", () => {
       agentDir,
     })(pi as any);
 
-    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" }, true);
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.6-sol" }, true);
     await runHandler(
       handlers,
       "session_start",
@@ -350,10 +350,10 @@ describe("piFastModeExtension runtime behavior", () => {
       await runHandler(
         handlers,
         "before_provider_request",
-        { type: "before_provider_request", payload: { model: "gpt-5.4" } },
+        { type: "before_provider_request", payload: { model: "gpt-5.6-sol" } },
         ctx,
       ),
-    ).toEqual({ model: "gpt-5.4", service_tier: "priority" });
+    ).toEqual({ model: "gpt-5.6-sol", service_tier: "priority" });
     await expect(
       readFile(getUserConfigPath(agentDir), "utf8"),
     ).rejects.toThrow();
@@ -388,7 +388,7 @@ describe("piFastModeExtension runtime behavior", () => {
       agentDir,
     })(pi as any);
 
-    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" }, false);
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.6-sol" }, false);
     await runHandler(
       handlers,
       "session_start",
@@ -400,7 +400,7 @@ describe("piFastModeExtension runtime behavior", () => {
       await runHandler(
         handlers,
         "before_provider_request",
-        { type: "before_provider_request", payload: { model: "gpt-5.4" } },
+        { type: "before_provider_request", payload: { model: "gpt-5.6-sol" } },
         ctx,
       ),
     ).toBeUndefined();
@@ -424,7 +424,7 @@ describe("piFastModeExtension runtime behavior", () => {
       agentDir,
     })(pi as any);
 
-    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" });
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.6-sol" });
     await runHandler(
       handlers,
       "session_start",
@@ -444,13 +444,13 @@ describe("piFastModeExtension runtime behavior", () => {
       "before_provider_request",
       {
         type: "before_provider_request",
-        payload: { model: "gpt-5.4", messages: [] },
+        payload: { model: "gpt-5.6-sol", messages: [] },
       },
       ctx,
     );
 
     expect(mutated).toEqual({
-      model: "gpt-5.4",
+      model: "gpt-5.6-sol",
       messages: [],
       service_tier: "priority",
     });
@@ -468,7 +468,7 @@ describe("piFastModeExtension runtime behavior", () => {
       agentDir,
     })(pi as any);
 
-    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" });
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.6-sol" });
     await runHandler(
       handlers,
       "session_start",
@@ -513,7 +513,7 @@ describe("piFastModeExtension runtime behavior", () => {
       agentDir,
     })(pi as any);
 
-    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" });
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.6-sol" });
     await runHandler(
       handlers,
       "session_start",
@@ -533,7 +533,7 @@ describe("piFastModeExtension runtime behavior", () => {
     const unchanged = await runHandler(
       handlers,
       "before_provider_request",
-      { type: "before_provider_request", payload: { model: "gpt-5.4" } },
+      { type: "before_provider_request", payload: { model: "gpt-5.6-sol" } },
       ctx,
     );
 
@@ -552,7 +552,7 @@ describe("piFastModeExtension runtime behavior", () => {
       agentDir,
     })(pi as any);
 
-    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" });
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.6-sol" });
     await runHandler(
       handlers,
       "session_start",
@@ -588,7 +588,7 @@ describe("piFastModeExtension runtime behavior", () => {
 
       const ctx = makeCtx(
         cwd,
-        { provider: "openai-codex", id: "gpt-5.5" },
+        { provider: "openai-codex", id: "gpt-5.6-terra" },
         projectTrusted,
       );
       await runHandler(
@@ -621,7 +621,7 @@ describe("piFastModeExtension runtime behavior", () => {
       agentDir,
     })(pi as any);
 
-    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" });
+    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.6-sol" });
     await runHandler(
       handlers,
       "session_start",

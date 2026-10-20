@@ -1,6 +1,6 @@
 # pi-openai-fast-mode
 
-Pi package that adds a Fast Mode toggle for GPT-6-Astra, GPT-5.6, GPT-5.5, and GPT-5.4.
+Pi package that adds a Fast Mode toggle for GPT-6.1-Sol, GPT-6-Astra, GPT-5.6-Sol, GPT-5.6-Terra, and GPT-5.6-Luna.
 
 <img style="width: 100%; height: auto;" alt="fast mode" src="https://raw.githubusercontent.com/johncmunson/pi-openai-fast-mode/refs/heads/main/preview-img.png" />
 
@@ -51,28 +51,11 @@ Fast Mode starts disabled and only applies to exact configured provider/model pa
 {
   "enabled": false,
   "targets": [
-    { "provider": "openai", "model": "gpt-5.4", "serviceTier": "priority" },
-    { "provider": "openai", "model": "gpt-5.5", "serviceTier": "priority" },
-    { "provider": "openai", "model": "gpt-5.6", "serviceTier": "priority" },
     { "provider": "openai", "model": "gpt-5.6-sol", "serviceTier": "priority" },
     { "provider": "openai", "model": "gpt-5.6-terra", "serviceTier": "priority" },
     { "provider": "openai", "model": "gpt-5.6-luna", "serviceTier": "priority" },
     { "provider": "openai", "model": "gpt-6-astra", "serviceTier": "priority" },
-    {
-      "provider": "openai-codex",
-      "model": "gpt-5.4",
-      "serviceTier": "priority"
-    },
-    {
-      "provider": "openai-codex",
-      "model": "gpt-5.5",
-      "serviceTier": "priority"
-    },
-    {
-      "provider": "openai-codex",
-      "model": "gpt-5.6",
-      "serviceTier": "priority"
-    },
+    { "provider": "openai", "model": "gpt-6.1-sol", "serviceTier": "priority" },
     {
       "provider": "openai-codex",
       "model": "gpt-5.6-sol",
@@ -92,6 +75,11 @@ Fast Mode starts disabled and only applies to exact configured provider/model pa
       "provider": "openai-codex",
       "model": "gpt-6-astra",
       "serviceTier": "priority"
+    },
+    {
+      "provider": "openai-codex",
+      "model": "gpt-6.1-sol",
+      "serviceTier": "priority"
     }
   ]
 }
@@ -104,7 +92,7 @@ extension preserves custom provider/model pairs, per-target `serviceTier`
 values, removals, ordering, and an empty `targets` array. An empty array
 intentionally disables Fast Mode targeting even when `enabled` is `true`.
 
-When a release adds default targets, it migrates a persisted target list only
+When a release changes default targets (adding or removing models), it migrates a persisted target list only
 if that list exactly matches a known historical package default (including
 order and service tiers). It then replaces that untouched historical list with
 the new default list while preserving `enabled`. Every other list is treated as

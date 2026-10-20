@@ -33,20 +33,15 @@ afterEach(async () => {
 });
 
 describe("DEFAULT_CONFIG", () => {
-  it("starts disabled with exact OpenAI and OpenAI-Codex GPT-5.4/GPT-5.5/GPT-5.6/GPT-6-Astra targets", () => {
+  it("starts disabled with exact OpenAI and OpenAI-Codex GPT-5.6 variants/GPT-6-Astra/GPT-6.1-Sol targets", () => {
     expect(DEFAULT_CONFIG).toEqual({
       enabled: false,
       targets: [
-        { provider: "openai", model: "gpt-5.4", serviceTier: "priority" },
-        { provider: "openai", model: "gpt-5.5", serviceTier: "priority" },
-        { provider: "openai", model: "gpt-5.6", serviceTier: "priority" },
         { provider: "openai", model: "gpt-5.6-sol", serviceTier: "priority" },
         { provider: "openai", model: "gpt-5.6-terra", serviceTier: "priority" },
         { provider: "openai", model: "gpt-5.6-luna", serviceTier: "priority" },
         { provider: "openai", model: "gpt-6-astra", serviceTier: "priority" },
-        { provider: "openai-codex", model: "gpt-5.4", serviceTier: "priority" },
-        { provider: "openai-codex", model: "gpt-5.5", serviceTier: "priority" },
-        { provider: "openai-codex", model: "gpt-5.6", serviceTier: "priority" },
+        { provider: "openai", model: "gpt-6.1-sol", serviceTier: "priority" },
         {
           provider: "openai-codex",
           model: "gpt-5.6-sol",
@@ -63,6 +58,7 @@ describe("DEFAULT_CONFIG", () => {
           serviceTier: "priority",
         },
         { provider: "openai-codex", model: "gpt-6-astra", serviceTier: "priority" },
+        { provider: "openai-codex", model: "gpt-6.1-sol", serviceTier: "priority" },
       ],
     });
   });
@@ -73,11 +69,56 @@ describe("DEFAULT_CONFIG", () => {
     copy.targets[0]!.model = "changed";
 
     expect(DEFAULT_CONFIG.enabled).toBe(false);
-    expect(DEFAULT_CONFIG.targets[0]!.model).toBe("gpt-5.4");
+    expect(DEFAULT_CONFIG.targets[0]!.model).toBe("gpt-5.6-sol");
   });
 });
 
 describe("migrateDefaultTargets", () => {
+  const outgoingTargets = ["openai", "openai-codex"].flatMap((provider) =>
+    ["gpt-5.4", "gpt-5.5", "gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-6-astra", "gpt-6.1-sol"].map(
+      (model) => ({ provider, model, serviceTier: "priority" }),
+    ),
+  );
+
+  it.each([true, false])("removes retired models from untouched defaults while preserving enabled=%s", (enabled) => {
+    expect(migrateDefaultTargets({ enabled, targets: outgoingTargets })).toEqual({
+      enabled,
+      targets: DEFAULT_CONFIG.targets,
+    });
+  });
+
+  it("preserves customized outgoing defaults", () => {
+    const targets = outgoingTargets.map((target, index) =>
+      index === 0 ? { ...target, serviceTier: "flex" } : target,
+    );
+    const config = { enabled: true, targets };
+    expect(migrateDefaultTargets(config)).toEqual(config);
+  });
+
+  const preSolTargets = ["openai", "openai-codex"].flatMap((provider) =>
+    ["gpt-5.4", "gpt-5.5", "gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-6-astra"].map(
+      (model) => ({ provider, model, serviceTier: "priority" }),
+    ),
+  );
+
+  it.each([true, false])("upgrades pre-Sol defaults while preserving enabled=%s", (enabled) => {
+    expect(migrateDefaultTargets({ enabled, targets: preSolTargets })).toEqual({
+      enabled,
+      targets: DEFAULT_CONFIG.targets,
+    });
+  });
+
+  it.each([
+    preSolTargets.slice(1),
+    [...preSolTargets].reverse(),
+    preSolTargets.map((target, index) =>
+      index === 0 ? { ...target, serviceTier: "flex" } : target,
+    ),
+  ].map((targets) => ({ targets })))("preserves customized pre-Sol defaults", ({ targets }) => {
+    const config = { enabled: true, targets };
+    expect(migrateDefaultTargets(config)).toEqual(config);
+  });
+
   const previousTargets = ["openai", "openai-codex"].flatMap((provider) =>
     ["gpt-5.4", "gpt-5.5", "gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"].map(
       (model) => ({ provider, model, serviceTier: "priority" }),

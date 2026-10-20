@@ -12,9 +12,6 @@ import {
 export const DEFAULT_CONFIG: FastModeConfig = {
   enabled: false,
   targets: [
-    { provider: "openai", model: "gpt-5.4", serviceTier: DEFAULT_SERVICE_TIER },
-    { provider: "openai", model: "gpt-5.5", serviceTier: DEFAULT_SERVICE_TIER },
-    { provider: "openai", model: "gpt-5.6", serviceTier: DEFAULT_SERVICE_TIER },
     {
       provider: "openai",
       model: "gpt-5.6-sol",
@@ -31,21 +28,7 @@ export const DEFAULT_CONFIG: FastModeConfig = {
       serviceTier: DEFAULT_SERVICE_TIER,
     },
     { provider: "openai", model: "gpt-6-astra", serviceTier: DEFAULT_SERVICE_TIER },
-    {
-      provider: "openai-codex",
-      model: "gpt-5.4",
-      serviceTier: DEFAULT_SERVICE_TIER,
-    },
-    {
-      provider: "openai-codex",
-      model: "gpt-5.5",
-      serviceTier: DEFAULT_SERVICE_TIER,
-    },
-    {
-      provider: "openai-codex",
-      model: "gpt-5.6",
-      serviceTier: DEFAULT_SERVICE_TIER,
-    },
+    { provider: "openai", model: "gpt-6.1-sol", serviceTier: DEFAULT_SERVICE_TIER },
     {
       provider: "openai-codex",
       model: "gpt-5.6-sol",
@@ -66,12 +49,27 @@ export const DEFAULT_CONFIG: FastModeConfig = {
       model: "gpt-6-astra",
       serviceTier: DEFAULT_SERVICE_TIER,
     },
+    {
+      provider: "openai-codex",
+      model: "gpt-6.1-sol",
+      serviceTier: DEFAULT_SERVICE_TIER,
+    },
   ],
 };
 
 // Add the outgoing target list here whenever DEFAULT_CONFIG.targets changes.
 // Only exact matches are migrated, so any user customization remains untouched.
 const HISTORICAL_DEFAULT_TARGETS: readonly (readonly FastTarget[])[] = [
+  ["openai", "openai-codex"].flatMap((provider) =>
+    ["gpt-5.4", "gpt-5.5", "gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-6-astra", "gpt-6.1-sol"].map(
+      (model) => ({ provider, model, serviceTier: DEFAULT_SERVICE_TIER }),
+    ),
+  ),
+  ["openai", "openai-codex"].flatMap((provider) =>
+    ["gpt-5.4", "gpt-5.5", "gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-6-astra"].map(
+      (model) => ({ provider, model, serviceTier: DEFAULT_SERVICE_TIER }),
+    ),
+  ),
   ["openai", "openai-codex"].flatMap((provider) =>
     ["gpt-5.4", "gpt-5.5", "gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"].map(
       (model) => ({ provider, model, serviceTier: DEFAULT_SERVICE_TIER }),

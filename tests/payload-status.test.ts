@@ -87,6 +87,23 @@ describe("payload mutation", () => {
     expect(payload).not.toHaveProperty("service_tier");
   });
 
+  it.each(["openai", "openai-codex"])("supports GPT-6.1-Sol on %s by default", (provider) => {
+    const defaults = { ...cloneConfig(), enabled: true };
+    const model = { provider, id: "gpt-6.1-sol" };
+    const payload = { model: model.id, input: [] };
+
+    expect(getFastModePayload(defaults, model, payload)).toEqual({
+      ...payload,
+      service_tier: "priority",
+    });
+    expect(getStatusText(defaults, model)).toBe("fast");
+    expect(getFastModePayload({ ...defaults, enabled: false }, model, payload)).toBeUndefined();
+    expect(getStatusText({ ...defaults, enabled: false }, model)).toBeUndefined();
+    expect(getFastModePayload(defaults, { ...model, id: "gpt-6.1-sol-preview" }, payload)).toBeUndefined();
+    expect(getStatusText(defaults, { ...model, id: "gpt-6.1-sol-preview" })).toBeUndefined();
+    expect(payload).not.toHaveProperty("service_tier");
+  });
+
   it("applyFastModePayload injects service_tier while preserving existing fields", () => {
     const payload = { model: "gpt-5.4", messages: [], service_tier: "auto" };
     const mutated = applyFastModePayload(payload, "priority");
